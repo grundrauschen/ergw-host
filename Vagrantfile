@@ -50,6 +50,8 @@ Vagrant.configure(2) do |config|
      # Customize the amount of memory on the VM:
     vb.memory = "1024"
   end
+
+  config.ssh.forward_agent = true
   #
   # View the documentation for the provider you are using for more
   # information on available options.
@@ -70,24 +72,62 @@ Vagrant.configure(2) do |config|
   #SHELL
   
   config.vm.define "host" do |host|
+    host.vm.network "private_network",
+        ip: "10.101.1.4",
+        auto_config: false
+
+    host.vm.network "private_network",
+        ip: "10.102.1.4",
+        auto_config: false
+   #manual ip
+    host.vm.provision "shell",
+      run: "always",
+      inline: "ifconfig enp0s8 10.101.1.4 netmask 255.255.0.0 up"
+
+    host.vm.provision "shell",
+      run: "always",
+      inline: "ifconfig enp0s9 10.102.1.4 netmask 255.255.0.0 up"
+    
     host.vm.provision "shell", inline: <<-SHELL
       sudo echo "deb http://ppa.launchpad.net/ergw/xenial/ubuntu xenial main" > /etc/apt/sources.list.d/ergw-xenial-ppa.list
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 58A14C3D
       curl -s https://packagecloud.io/install/repositories/ergw/ci/script.deb.sh | sudo bash
       sudo apt-get update
-      sudo apt-get install -y apt-transport-https ca-certificates
+      sudo apt-get install -y apt-transport-https ca-certificates git
       sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
       echo "deb https://apt.dockerproject.org/repo ubuntu-xenial main" | sudo tee /etc/apt/sources.list.d/docker.list
       sudo apt-get update
-      sudo apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual docker-engine
+      sudo apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual docker-engine docker-compose
       sudo apt-get -y install linux-generic
       sudo systemctl enable docker
       sudo apt-get -y upgrade
+      sudo usermod -a -G docker ubuntu
+      sudo apt-get install -y virtualbox-guest-dkms
       sudo reboot
     SHELL
 
   end
 
   config.vm.define "testclient" do |testclient|
+    testclient.vm.network "private_network",
+        ip: "10.101.1.3",
+        auto_config: false
+
+    testclient.vm.network "private_network",
+        ip: "10.102.1.3",
+        auto_config: false
+
+  # manual ip
+    testclient.vm.provision "shell",
+      run: "always",
+      inline: "ifconfig enp0s8 10.101.1.3 netmask 255.255.0.0 up"
+
+    testclient.vm.provision "shell",
+      run: "always",
+      inline: "ifconfig enp0s9 10.102.1.3 netmask 255.255.0.0 up"
+
+    testclient.vm.provision "shell",
+      inline: "sudo apt-get update && sudo apt-get install -y virtualbox-guest-dkms"
+    
   end
 end
